@@ -1,0 +1,27 @@
+main: com.cavetale.crypt.CryptPlugin
+name: Crypt
+
+version: 0.1
+api-version: 1.19
+
+author: StarTux
+website: https://github.com/StarTux/Crypt
+description: Crypt Plugin
+
+depend: [Core, Blank]
+softdepend: []
+
+commands:
+
+  crypt:
+    aliases: []
+    description: Crypt Command
+    permission: crypt.crypt
+    usage: |-
+      /crypt
+
+permissions:
+
+  crypt.crypt:
+    description: Use /crypt
+    default: op
