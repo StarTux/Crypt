@@ -8,25 +8,25 @@ import java.util.List;
 /**
  * Room abstraction for the RogueGenerator.
  */
-final class Room {
+final class RogueRoom {
     protected final List<Area> areas = new ArrayList<>();
-    protected final List<Room> nbors = new ArrayList<>();
+    protected final List<RogueRoom> nbors = new ArrayList<>();
     protected final List<Vec2i> walls = new ArrayList<>();
 
-    protected Room() { }
+    protected RogueRoom() { }
 
-    protected Room(final Area mainArea) {
+    protected RogueRoom(final Area mainArea) {
         areas.add(mainArea);
     }
 
     /**
      * Combiner constructor.
      */
-    protected Room(final Room a, final Room b) {
+    protected RogueRoom(final RogueRoom a, final RogueRoom b) {
         areas.addAll(a.areas);
         areas.addAll(b.areas);
         nbors.addAll(a.nbors);
-        for (Room nbor : b.nbors) {
+        for (RogueRoom nbor : b.nbors) {
             if (!nbors.contains(nbor)) nbors.add(nbor);
         }
         nbors.remove(a);

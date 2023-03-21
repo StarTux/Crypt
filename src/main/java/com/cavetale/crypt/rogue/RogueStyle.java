@@ -4,6 +4,23 @@ import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;
 
 public enum RogueStyle {
+    STONE {
+        @Override public BlockData floor(RogueContext context, int x, int y, int z) {
+            return Material.SMOOTH_STONE.createBlockData();
+        }
+
+        @Override public BlockData ceiling(RogueContext context, int x, int y, int z) {
+            return Material.OAK_PLANKS.createBlockData();
+        }
+
+        @Override public BlockData wall(RogueContext context, int x, int y, int z) {
+            if (y == context.floorLevel + 1) {
+                return Material.COBBLESTONE.createBlockData();
+            } else {
+                return Material.STONE_BRICKS.createBlockData();
+            }
+        }
+    },
     DESERT {
         @Override public BlockData floor(RogueContext context, int x, int y, int z) {
             return Material.SAND.createBlockData();

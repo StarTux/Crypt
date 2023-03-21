@@ -41,4 +41,25 @@ public final class Area {
         }
         return result;
     }
+
+    /**
+     * Two areas are neighbors if they are able to share a set of
+     * matching doorways.
+     * So, they need to be right next to each other, and have
+     * overlapping non-wall surface.
+     */
+    public static boolean areNbors(Area a, Area b) {
+        // Check if they touch
+        if (a.bx + 1 == b.ax || b.bx + 1 == a.ax) {
+            // Horizontal
+            return (a.az < b.bz - 1 && a.bz > b.az + 1)
+                || (b.az < a.bz - 1 && b.bz > a.az + 1);
+        } else if (a.bz + 1 == b.az || b.bz + 1 == a.az) {
+            // Vertical
+            return (a.ax < b.bx - 1 && a.bx > b.ax + 1)
+                || (b.ax < a.bx - 1 && b.bx > a.ax + 1);
+        } else {
+            return false;
+        }
+    }
 }

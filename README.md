@@ -1,3 +1,3 @@
 # Crypt
 
-Crypt plugin.
+Crypt Generator Plugin.
