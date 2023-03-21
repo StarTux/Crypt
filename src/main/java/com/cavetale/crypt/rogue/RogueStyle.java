@@ -14,11 +14,9 @@ public enum RogueStyle {
         }
 
         @Override public BlockData wall(RogueContext context, int x, int y, int z) {
-            if (y == context.floorLevel + 1) {
-                return Material.COBBLESTONE.createBlockData();
-            } else {
-                return Material.STONE_BRICKS.createBlockData();
-            }
+            return y == context.floorLevel + 1
+                ? Material.COBBLESTONE.createBlockData()
+                : Material.STONE_BRICKS.createBlockData();
         }
     },
     DESERT {
@@ -31,11 +29,9 @@ public enum RogueStyle {
         }
 
         @Override public BlockData wall(RogueContext context, int x, int y, int z) {
-            if (y == context.floorLevel + 1) {
-                return Material.CHISELED_SANDSTONE.createBlockData();
-            } else {
-                return Material.CUT_SANDSTONE.createBlockData();
-            }
+            return y == context.floorLevel + 1
+                ? Material.CHISELED_SANDSTONE.createBlockData()
+                : Material.CUT_SANDSTONE.createBlockData();
         }
     },
     ;

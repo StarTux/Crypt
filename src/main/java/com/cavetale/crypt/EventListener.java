@@ -25,7 +25,9 @@ public final class EventListener implements Listener {
         if (event.getPhase().ordinal() != 0) return;
         final int min = event.getWorldInfo().getMinHeight();
         final int max = event.getWorldInfo().getMaxHeight();
-        event.getChunkData().setRegion(0, min, 0, 16, max, 16, Material.BEDROCK);
+        event.getChunkData().setRegion(0, min, 0, 15, min, 15, Material.BEDROCK);
+        event.getChunkData().setRegion(0, min + 1, 0, 16, max - 1, 16, Material.STONE);
+        event.getChunkData().setRegion(0, max, 0, 15, max, 15, Material.BEDROCK);
     }
 
     @EventHandler

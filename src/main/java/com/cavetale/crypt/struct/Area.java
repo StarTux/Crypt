@@ -62,4 +62,19 @@ public final class Area {
             return false;
         }
     }
+
+    public static Area getBoundingBox(List<Area> areas) {
+        int ax = areas.get(0).ax;
+        int az = areas.get(0).az;
+        int bx = areas.get(0).bx;
+        int bz = areas.get(0).bz;
+        for (int i = 1; i < areas.size(); i += 1) {
+            Area area = areas.get(i);
+            ax = Math.min(area.ax, ax);
+            az = Math.min(area.az, az);
+            bx = Math.max(area.bx, bx);
+            bz = Math.max(area.bz, bz);
+        }
+        return new Area(ax, az, bx, bz);
+    }
 }

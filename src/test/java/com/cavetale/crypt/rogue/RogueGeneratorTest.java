@@ -1,12 +1,13 @@
 package com.cavetale.crypt.rogue;
 
+import com.cavetale.crypt.struct.Area;
 import java.util.Random;
+import java.util.UUID;
 import org.junit.Test;
 
 public final class RogueGeneratorTest {
     static final int MIN_ROOM_SIZE = 4;
 
-    @Test
     public void test() {
         Random random = new Random();
         int minLeft = 0;
@@ -38,5 +39,13 @@ public final class RogueGeneratorTest {
         }
         System.out.println("left = " + minLeft + " ... " + maxLeft);
         System.out.println("right = " + minRight + " ... " + maxRight);
+    }
+
+    @Test
+    public void test2() {
+        RogueGenerator gen = new RogueGenerator(null, new Random(), new UUID(0L, 0L), "noname", null, null);
+        gen.setTotalArea(new Area(0, 0, 80, 40));
+        gen.main();
+        System.out.println(gen.makeBoard().toMultiLineString());
     }
 }

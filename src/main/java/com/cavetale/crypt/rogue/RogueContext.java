@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 public final class RogueContext {
     protected final Random random;
     protected final RogueRoom room;
+    protected final RogueTile tile;
     protected final int floorLevel;
     protected final int ceilingLevel;
 }

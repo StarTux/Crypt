@@ -1,16 +1,17 @@
 package com.cavetale.crypt.rogue;
 
-import com.cavetale.core.struct.Vec2i;
 import com.cavetale.core.struct.Vec3i;
 import com.cavetale.crypt.cache.RegionCacheTag;
 import com.cavetale.crypt.struct.Area;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -30,7 +31,7 @@ public final class RogueGenerator {
     // Output
     private RegionCacheTag tag;
     private Vec3i spawn;
-    private Area totalArea;
+    @Setter private Area totalArea;
     private int totalSplits;
     private int totalBlocks;
     private final List<Area> areas = new ArrayList<>();
@@ -44,20 +45,24 @@ public final class RogueGenerator {
      */
     public void start() {
         this.tag = plugin().getRegionCache().allocateRegions(1, 1, uuid, name);
-        Bukkit.getScheduler().runTaskAsynchronously(plugin(), this::main);
-    }
-
-    /**
-     * The main generation function which can be processed
-     * asynchronously.
-     */
-    private void main() {
         final int cx = (tag.getOrigin().x << 9) + 255;
         final int cz = (tag.getOrigin().z << 9) + 255;
         this.spawn = new Vec3i(cx, FLOOR + 1, cz);
         // Split Areas
         int outset = 32;
         this.totalArea = new Area(cx - outset, cz - outset, cx + outset - 1, cz + outset - 1);
+        Bukkit.getScheduler().runTaskAsynchronously(plugin(), () -> {
+                main();
+                Bukkit.getScheduler().runTask(plugin(), this::post);
+            });
+    }
+
+    /**
+     * The main generation function which can be processed
+     * This requires the totalArea to be set!
+     * asynchronously,  or ran on its own for testing.
+     */
+    protected void main() {
         areas.add(totalArea);
         splitArea(0);
         // Make Rooms
@@ -66,8 +71,9 @@ public final class RogueGenerator {
         while (true) {
             if (!combineRooms()) break;
         }
-        for (RogueRoom room : rooms) room.processWalls();
-        Bukkit.getScheduler().runTask(plugin(), this::post);
+        for (RogueRoom room : rooms) room.makeBoundingBox();
+        removeRooms(rooms.size()); // needs bb
+        for (RogueRoom room : rooms) room.makeBoard();
     }
 
     /**
@@ -86,7 +92,7 @@ public final class RogueGenerator {
         if (callback != null) callback.accept(this);
     }
 
-    private static final int MIN_ROOM_SIZE = 4;
+    private static final int MIN_ROOM_SIZE = 5;
     private static final int MIN_ROOM_SIZE_2 = MIN_ROOM_SIZE * 2;
 
     /**
@@ -155,21 +161,47 @@ public final class RogueGenerator {
      */
     private boolean combineRooms() {
         sort(rooms, comparing(RogueRoom::getArea));
-        RogueRoom room1 = rooms.get(0);
-        if (room1.getArea() >= DESIRED_ROOM_AREA) return false;
-        RogueRoom room2 = room1.nbors.get(random.nextInt(room1.nbors.size()));
-        rooms.remove(room1);
-        rooms.remove(room2);
-        RogueRoom room3 = new RogueRoom(room1, room2);
-        for (RogueRoom it : rooms) {
-            if (it.nbors.contains(room1) || it.nbors.contains(room2)) {
-                it.nbors.remove(room1);
-                it.nbors.remove(room2);
-                it.nbors.add(room3);
+        for (int i = 0; i < rooms.size(); i += 1) {
+            RogueRoom room1 = rooms.get(i);
+            if (room1.nbors.isEmpty()) continue;
+            if (room1.getArea() >= DESIRED_ROOM_AREA) return false;
+            RogueRoom room2 = room1.nbors.get(random.nextInt(room1.nbors.size()));
+            rooms.remove(room1);
+            rooms.remove(room2);
+            RogueRoom room3 = new RogueRoom(room1, room2);
+            for (RogueRoom it : rooms) {
+                if (it.nbors.contains(room1) || it.nbors.contains(room2)) {
+                    it.nbors.remove(room1);
+                    it.nbors.remove(room2);
+                    it.nbors.add(room3);
+                }
             }
+            rooms.add(room3);
+            return true;
         }
-        rooms.add(room3);
-        return true;
+        return false;
+    }
+
+    private void removeRooms(int amount) {
+        Collections.shuffle(rooms, random);
+        List<RogueRoom> removeRooms = new ArrayList<>();
+        OUTER: for (int i = 0; i < amount; i += 1) {
+            RogueRoom room = rooms.get(i);
+            int edges = 0;
+            if (room.boundingBox.ax == totalArea.ax) edges += 1;
+            if (room.boundingBox.bx == totalArea.bx) edges += 1;
+            if (room.boundingBox.az == totalArea.az) edges += 1;
+            if (room.boundingBox.bz == totalArea.bz) edges += 1;
+            if (edges > 1) continue;
+            for (RogueRoom nbor : room.nbors) {
+                if (removeRooms.contains(nbor)) continue OUTER;
+            }
+            removeRooms.add(room);
+        }
+        rooms.removeAll(removeRooms);
+        for (RogueRoom room : rooms) {
+            room.nbors.removeAll(removeRooms);
+        }
     }
 
     /**
@@ -179,29 +211,53 @@ public final class RogueGenerator {
         int blocks = 0;
         for (RogueRoom room : rooms) {
             int ceiling = FLOOR + 5 + random.nextInt(3) - random.nextInt(3);
-            RogueContext context = new RogueContext(random, room, FLOOR, ceiling);
-            for (Area area : room.areas) {
-                for (int z = area.az; z <= area.bz; z += 1) {
-                    for (int x = area.ax; x <= area.bx; x += 1) {
-                        Vec2i vec = new Vec2i(x, z);
-                        if (room.walls.contains(vec)) {
-                            for (int y = FLOOR; y <= ceiling; y += 1) {
-                                world.getBlockAt(x, y, z).setBlockData(style.wall(context, x, y, z));
-                                this.totalBlocks += 1;
-                            }
-                        } else {
-                            for (int y = FLOOR + 1; y < ceiling; y += 1) {
-                                world.getBlockAt(x, y, z).setType(Material.CAVE_AIR);
-                                this.totalBlocks += 1;
-                            }
-                            world.getBlockAt(x, FLOOR, z).setBlockData(style.floor(context, x, FLOOR, z));
-                            world.getBlockAt(x, ceiling, z).setBlockData(style.ceiling(context, x, ceiling, z));
-                            this.totalBlocks += 2;
+            for (int dz = 0; dz < room.board.size.z; dz += 1) {
+                for (int dx = 0; dx < room.board.size.x; dx += 1) {
+                    RogueTile tile = room.board.getTile(dx, dz);
+                    if (tile.isUndefined()) continue;
+                    RogueContext context = new RogueContext(random, room, tile, FLOOR, ceiling);
+                    int x = room.boundingBox.ax + dx;
+                    int z = room.boundingBox.az + dz;
+                    if (tile.isWall()) {
+                        for (int y = FLOOR; y <= ceiling; y += 1) {
+                            world.getBlockAt(x, y, z).setBlockData(style.wall(context, x, y, z));
+                            this.totalBlocks += 1;
                         }
+                    } else {
+                        for (int y = FLOOR + 1; y < ceiling; y += 1) {
+                            world.getBlockAt(x, y, z).setType(Material.CAVE_AIR);
+                            this.totalBlocks += 1;
+                        }
+                        world.getBlockAt(x, FLOOR, z).setBlockData(style.floor(context, x, FLOOR, z));
+                        world.getBlockAt(x, ceiling, z).setBlockData(style.ceiling(context, x, ceiling, z));
+                        this.totalBlocks += 2;
                     }
                 }
             }
         }
         return blocks;
+    }
+
+    /**
+     * Combine all rooms into one board.  If main() has not finished,
+     * the result is undefined.
+     */
+    public RogueBoard makeBoard() {
+        RogueBoard result = new RogueBoard(totalArea.getSizeX(), totalArea.getSizeZ());
+        int iter = 0;
+        for (RogueRoom room : rooms) {
+            int it = iter++;
+            for (int dz = 0; dz < room.board.size.z; dz += 1) {
+                for (int dx = 0; dx < room.board.size.x; dx += 1) {
+                    RogueTile tile = room.board.getTile(dx, dz);
+                    if (tile.isUndefined()) continue;
+                    int x = dx + room.boundingBox.ax - totalArea.ax;
+                    int z = dz + room.boundingBox.az - totalArea.az;
+                    result.setTile(x, z, tile);
+                    result.setIndex(x, z, it);
+                }
+            }
+        }
+        return result;
     }
 }
