@@ -12,6 +12,14 @@ public final class Area {
     public final int bx;
     public final int bz;
 
+    public Vec2i getMin() {
+        return new Vec2i(ax, az);
+    }
+
+    public Vec2i getMax() {
+        return new Vec2i(bx, bz);
+    }
+
     public int getSizeX() {
         return bx - ax + 1;
     }
@@ -27,6 +35,11 @@ public final class Area {
     public boolean contains(Vec2i vec) {
         return ax <= vec.x && vec.x <= bx
             && az <= vec.z && vec.z <= bz;
+    }
+
+    public boolean contains(int x, int z) {
+        return ax <= x && x <= bx
+            && az <= z && z <= bz;
     }
 
     public List<Vec2i> getWalls() {
@@ -48,16 +61,16 @@ public final class Area {
      * So, they need to be right next to each other, and have
      * overlapping non-wall surface.
      */
-    public static boolean areNbors(Area a, Area b) {
+    public static boolean areNbors(int overlap, Area a, Area b) {
         // Check if they touch
         if (a.bx + 1 == b.ax || b.bx + 1 == a.ax) {
             // Horizontal
-            return (a.az < b.bz - 1 && a.bz > b.az + 1)
-                || (b.az < a.bz - 1 && b.bz > a.az + 1);
+            return (a.az <= b.bz - overlap && a.bz >= b.az + overlap)
+                || (b.az <= a.bz - overlap && b.bz >= a.az + overlap);
         } else if (a.bz + 1 == b.az || b.bz + 1 == a.az) {
             // Vertical
-            return (a.ax < b.bx - 1 && a.bx > b.ax + 1)
-                || (b.ax < a.bx - 1 && b.bx > a.ax + 1);
+            return (a.ax <= b.bx - overlap && a.bx >= b.ax + overlap)
+                || (b.ax <= a.bx - overlap && b.bx >= a.ax + overlap);
         } else {
             return false;
         }

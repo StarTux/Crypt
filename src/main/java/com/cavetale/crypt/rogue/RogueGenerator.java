@@ -71,8 +71,7 @@ public final class RogueGenerator {
         while (true) {
             if (!combineRooms()) break;
         }
-        for (RogueRoom room : rooms) room.makeBoundingBox();
-        removeRooms(rooms.size()); // needs bb
+        removeRooms(rooms.size() / 2);
         for (RogueRoom room : rooms) room.makeBoard();
     }
 
@@ -144,7 +143,7 @@ public final class RogueGenerator {
             RogueRoom a = rooms.get(i);
             for (int j = i + 1; j < rooms.size(); j += 1) {
                 RogueRoom b = rooms.get(j);
-                if (!Area.areNbors(a.areas.get(0), b.areas.get(0))) continue;
+                if (!Area.areNbors(2, a.areas.get(0), b.areas.get(0))) continue;
                 a.nbors.add(b);
                 b.nbors.add(a);
             }
@@ -182,26 +181,48 @@ public final class RogueGenerator {
         return false;
     }
 
-    private void removeRooms(int amount) {
+    /**
+     * Remove some room while attempting to keep the whole crypt
+     * traversable.
+     * To that end, we never remove:
+     * - Rooms splitting the map in two
+     * - Rooms cutting off one of the corners
+     * - Two rooms being neighbors of each other
+     */
+    private void removeRooms(int maxRemoveCount) {
         Collections.shuffle(rooms, random);
         List<RogueRoom> removeRooms = new ArrayList<>();
-        OUTER: for (int i = 0; i < amount; i += 1) {
+        for (int i = 0; i < rooms.size() && removeRooms.size() < maxRemoveCount; i += 1) {
             RogueRoom room = rooms.get(i);
-            int edges = 0;
-            if (room.boundingBox.ax == totalArea.ax) edges += 1;
-            if (room.boundingBox.bx == totalArea.bx) edges += 1;
-            if (room.boundingBox.az == totalArea.az) edges += 1;
-            if (room.boundingBox.bz == totalArea.bz) edges += 1;
-            if (edges > 1) continue;
-            for (RogueRoom nbor : room.nbors) {
-                if (removeRooms.contains(nbor)) continue OUTER;
-            }
             removeRooms.add(room);
+            if (!roomsAreConnected(removeRooms)) {
+                removeRooms.remove(room);
+            }
         }
         rooms.removeAll(removeRooms);
         for (RogueRoom room : rooms) {
             room.nbors.removeAll(removeRooms);
         }
+    }
+
+    private boolean roomsAreConnected(List<RogueRoom> ignoreList) {
+        List<RogueRoom> connected = new ArrayList<>();
+        for (RogueRoom room : rooms) {
+            if (!ignoreList.contains(room)) {
+                connected.add(room);
+                break;
+            }
+        }
+        if (connected.isEmpty()) return false;
+        for (int i = 0; i < connected.size(); i += 1) {
+            RogueRoom room = connected.get(i);
+            for (RogueRoom nbor : room.nbors) {
+                if (!connected.contains(nbor) && !ignoreList.contains(nbor)) {
+                    connected.add(nbor);
+                }
+            }
+        }
+        return connected.size() == rooms.size() - ignoreList.size();
     }
 
     /**

@@ -53,4 +53,34 @@ public enum RogueTile {
     public boolean isDoor() {
         return type == Type.DOOR;
     }
+
+    public static RogueTile wall(BlockFace face) {
+        return switch (face) {
+        case NORTH -> RogueTile.WALL_NORTH;
+        case EAST -> RogueTile.WALL_EAST;
+        case SOUTH -> RogueTile.WALL_SOUTH;
+        case WEST -> RogueTile.WALL_WEST;
+        default -> throw new IllegalArgumentException(face.name());
+        };
+    }
+
+    public static RogueTile corner(BlockFace face) {
+        return switch (face) {
+        case NORTH_EAST -> RogueTile.CORNER_NE;
+        case SOUTH_EAST -> RogueTile.CORNER_SE;
+        case SOUTH_WEST -> RogueTile.CORNER_SW;
+        case NORTH_WEST -> RogueTile.CORNER_NW;
+        default -> throw new IllegalArgumentException(face.name());
+        };
+    }
+
+    public static RogueTile innerCorner(BlockFace face) {
+        return switch (face) {
+        case NORTH_EAST -> RogueTile.CORNER_INNER_NE;
+        case SOUTH_EAST -> RogueTile.CORNER_INNER_SE;
+        case SOUTH_WEST -> RogueTile.CORNER_INNER_SW;
+        case NORTH_WEST -> RogueTile.CORNER_INNER_NW;
+        default -> throw new IllegalArgumentException(face.name());
+        };
+    }
 }

@@ -23,6 +23,7 @@ final class RogueRoom {
 
     protected RogueRoom(final Area mainArea) {
         areas.add(mainArea);
+        boundingBox = mainArea;
     }
 
     /**
@@ -37,6 +38,7 @@ final class RogueRoom {
         }
         nbors.remove(a);
         nbors.remove(b);
+        this.boundingBox = Area.getBoundingBox(areas);
     }
 
     protected int getArea() {
@@ -52,6 +54,21 @@ final class RogueRoom {
         return false;
     }
 
+    public boolean contains(int x, int z) {
+        for (Area area : areas) {
+            if (area.contains(x, z)) return true;
+        }
+        return false;
+    }
+
+    public Vec2i worldToRoom(Vec2i room) {
+        return room.add(-boundingBox.ax, -boundingBox.az);
+    }
+
+    public Vec2i roomToWorld(Vec2i world) {
+        return world.add(boundingBox.ax, boundingBox.az);
+    }
+
     private static final BlockFace[] ADJACENT_FACES = {
         BlockFace.NORTH,
         BlockFace.EAST,
@@ -62,10 +79,6 @@ final class RogueRoom {
         BlockFace.SOUTH_WEST,
         BlockFace.NORTH_WEST,
     };
-
-    protected void makeBoundingBox() {
-        this.boundingBox = Area.getBoundingBox(areas);
-    }
 
     protected void makeBoard() {
         this.board = new RogueBoard(boundingBox.getSizeX(), boundingBox.getSizeZ());
@@ -93,23 +106,9 @@ final class RogueRoom {
                 if (emptyCartFaces.isEmpty() && emptyDiagFaces.isEmpty()) continue;
                 RogueTile tile = null;
                 if (emptyCartFaces.size() == 1) {
-                    BlockFace singleFace = emptyCartFaces.iterator().next();
-                    tile = switch (singleFace) {
-                    case NORTH -> RogueTile.WALL_NORTH;
-                    case EAST -> RogueTile.WALL_EAST;
-                    case SOUTH -> RogueTile.WALL_SOUTH;
-                    case WEST -> RogueTile.WALL_WEST;
-                    default -> throw new IllegalStateException(singleFace.name());
-                    };
+                    tile = RogueTile.wall(emptyCartFaces.iterator().next());
                 } else if (emptyDiagFaces.size() == 1) {
-                    BlockFace singleFace = emptyDiagFaces.iterator().next();
-                    tile = switch (singleFace) {
-                    case NORTH_EAST -> RogueTile.CORNER_INNER_NE;
-                    case SOUTH_EAST -> RogueTile.CORNER_INNER_SE;
-                    case SOUTH_WEST -> RogueTile.CORNER_INNER_SW;
-                    case NORTH_WEST -> RogueTile.CORNER_INNER_NW;
-                    default -> null;
-                    };
+                    tile = RogueTile.innerCorner(emptyDiagFaces.iterator().next());
                 } else if (emptyCartFaces.size() == 2) {
                     int dx = 0;
                     int dz = 0;
@@ -119,13 +118,7 @@ final class RogueRoom {
                     }
                     for (BlockFace it : emptyDiagFaces) {
                         if (it.getModX() == dx && it.getModZ() == dz) {
-                            tile = switch (it) {
-                            case NORTH_EAST -> RogueTile.CORNER_NE;
-                            case SOUTH_EAST -> RogueTile.CORNER_SE;
-                            case SOUTH_WEST -> RogueTile.CORNER_SW;
-                            case NORTH_WEST -> RogueTile.CORNER_NW;
-                            default -> null;
-                            };
+                            tile = RogueTile.corner(it);
                             break;
                         }
                     }

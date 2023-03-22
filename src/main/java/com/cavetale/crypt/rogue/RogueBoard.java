@@ -61,16 +61,7 @@ public final class RogueBoard {
                 if (tile.isWall()) {
                     chr = tile.getCharacter();
                 } else if (tile.isFloor()) {
-                    int index = getIndex(x, z);
-                    if (index < 10) {
-                        chr = (char) ('0' + index);
-                    } else if (index < 10 + 26) {
-                        chr = (char) ('a' + (index - 10));
-                    } else if (index < 10 + 26 + 26) {
-                        chr = (char) ('A' + (index - 10 - 26));
-                    } else {
-                        chr = '.';
-                    }
+                    chr = '.';
                 } else if (tile.isDoor()) {
                     chr = tile.getCharacter();
                 } else {
@@ -82,5 +73,17 @@ public final class RogueBoard {
             }
         }
         return String.join("\n", lines);
+    }
+
+    private static char toChar(int index) {
+        if (index < 10) {
+            return (char) ('0' + index);
+        } else if (index < 10 + 26) {
+            return (char) ('a' + (index - 10));
+        } else if (index < 10 + 26 + 26) {
+            return (char) ('A' + (index - 10 - 26));
+        } else {
+            return '.';
+        }
     }
 }
