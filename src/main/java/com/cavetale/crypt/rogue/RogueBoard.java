@@ -61,7 +61,7 @@ public final class RogueBoard {
                 if (tile.isWall()) {
                     chr = tile.getCharacter();
                 } else if (tile.isFloor()) {
-                    chr = '.';
+                    chr = toChar(getIndex(x, z));
                 } else if (tile.isDoor()) {
                     chr = tile.getCharacter();
                 } else {

@@ -12,15 +12,15 @@ public enum RogueTile {
     WALL_EAST(Type.WALL, BlockFace.EAST, '\u2551'),
     WALL_SOUTH(Type.WALL, BlockFace.SOUTH, '\u2550'),
     WALL_WEST(Type.WALL, BlockFace.WEST, '\u2551'),
-    CORNER_NE(Type.WALL, BlockFace.NORTH_EAST, '\u2557'),
-    CORNER_SE(Type.WALL, BlockFace.SOUTH_EAST, '\u255D'),
-    CORNER_SW(Type.WALL, BlockFace.SOUTH_WEST, '\u255A'),
-    CORNER_NW(Type.WALL, BlockFace.NORTH_WEST, '\u2554'),
-    CORNER_INNER_NE(Type.WALL, BlockFace.NORTH_EAST, '\u255A'),
-    CORNER_INNER_SE(Type.WALL, BlockFace.SOUTH_EAST, '\u2554'),
-    CORNER_INNER_SW(Type.WALL, BlockFace.SOUTH_WEST, '\u2557'),
-    CORNER_INNER_NW(Type.WALL, BlockFace.NORTH_WEST, '\u255D'),
-    DOOR(Type.DOOR, '\u259A'),
+    CORNER_NE(Type.CORNER, BlockFace.NORTH_EAST, '\u2557'),
+    CORNER_SE(Type.CORNER, BlockFace.SOUTH_EAST, '\u255D'),
+    CORNER_SW(Type.CORNER, BlockFace.SOUTH_WEST, '\u255A'),
+    CORNER_NW(Type.CORNER, BlockFace.NORTH_WEST, '\u2554'),
+    CORNER_INNER_NE(Type.CORNER_INNER, BlockFace.NORTH_EAST, '\u255A'),
+    CORNER_INNER_SE(Type.CORNER_INNER, BlockFace.SOUTH_EAST, '\u2554'),
+    CORNER_INNER_SW(Type.CORNER_INNER, BlockFace.SOUTH_WEST, '\u2557'),
+    CORNER_INNER_NW(Type.CORNER_INNER, BlockFace.NORTH_WEST, '\u255D'),
+    DOOR(Type.DOOR, '\u2588'),
     ;
 
     public final Type type;
@@ -35,6 +35,8 @@ public enum RogueTile {
         UNDEFINED,
         FLOOR,
         WALL,
+        CORNER,
+        CORNER_INNER,
         DOOR,
     }
 
@@ -47,7 +49,9 @@ public enum RogueTile {
     }
 
     public boolean isWall() {
-        return type == Type.WALL;
+        return type == Type.WALL
+            || type == Type.CORNER
+            || type == Type.CORNER_INNER;
     }
 
     public boolean isDoor() {

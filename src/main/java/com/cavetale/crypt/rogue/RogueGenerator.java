@@ -47,7 +47,6 @@ public final class RogueGenerator {
         this.tag = plugin().getRegionCache().allocateRegions(1, 1, uuid, name);
         final int cx = (tag.getOrigin().x << 9) + 255;
         final int cz = (tag.getOrigin().z << 9) + 255;
-        this.spawn = new Vec3i(cx, FLOOR + 1, cz);
         // Split Areas
         int outset = 32;
         this.totalArea = new Area(cx - outset, cz - outset, cx + outset - 1, cz + outset - 1);
@@ -73,6 +72,10 @@ public final class RogueGenerator {
         }
         removeRooms(rooms.size() / 2);
         for (RogueRoom room : rooms) room.makeBoard();
+        for (RogueRoom room : rooms) room.findDoors(random);
+        for (RogueRoom room : rooms) room.placeDoors();
+        var center = rooms.get(0).areas.get(0).getCenter();
+        this.spawn = new Vec3i(center.x, FLOOR + 1, center.z);
     }
 
     /**
@@ -81,6 +84,7 @@ public final class RogueGenerator {
      */
     private void post() {
         drawRooms();
+        plugin().getLogger().info("\n" + makeBoard().toMultiLineString());
         plugin().getLogger().info("[RogueGenerator]"
                                   + " area:" + totalArea
                                   + " splits:" + totalSplits
@@ -143,7 +147,7 @@ public final class RogueGenerator {
             RogueRoom a = rooms.get(i);
             for (int j = i + 1; j < rooms.size(); j += 1) {
                 RogueRoom b = rooms.get(j);
-                if (!Area.areNbors(2, a.areas.get(0), b.areas.get(0))) continue;
+                if (!Area.areNbors(MIN_ROOM_SIZE - 1, a.areas.get(0), b.areas.get(0))) continue;
                 a.nbors.add(b);
                 b.nbors.add(a);
             }
@@ -244,6 +248,17 @@ public final class RogueGenerator {
                             world.getBlockAt(x, y, z).setBlockData(style.wall(context, x, y, z));
                             this.totalBlocks += 1;
                         }
+                    } else if (tile.isDoor()) {
+                        world.getBlockAt(x, FLOOR + 1, z).setType(Material.CAVE_AIR);
+                        world.getBlockAt(x, FLOOR + 2, z).setType(Material.CAVE_AIR);
+                        this.totalBlocks += 2;
+                        for (int y = FLOOR + 3; y < ceiling; y += 1) {
+                            world.getBlockAt(x, y, z).setBlockData(style.wall(context, x, y, z));
+                            this.totalBlocks += 1;
+                        }
+                        world.getBlockAt(x, FLOOR, z).setBlockData(style.floor(context, x, FLOOR, z));
+                        world.getBlockAt(x, ceiling, z).setBlockData(style.ceiling(context, x, ceiling, z));
+                        this.totalBlocks += 2;
                     } else {
                         for (int y = FLOOR + 1; y < ceiling; y += 1) {
                             world.getBlockAt(x, y, z).setType(Material.CAVE_AIR);

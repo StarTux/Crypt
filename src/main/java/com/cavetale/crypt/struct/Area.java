@@ -32,6 +32,10 @@ public final class Area {
         return getSizeX() * getSizeZ();
     }
 
+    public Vec2i getCenter() {
+        return new Vec2i((ax + bx) / 2, (bz + bz) / 2);
+    }
+
     public boolean contains(Vec2i vec) {
         return ax <= vec.x && vec.x <= bx
             && az <= vec.z && vec.z <= bz;
