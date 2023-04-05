@@ -1,9 +1,10 @@
 package com.cavetale.crypt.rogue;
 
+import com.cavetale.core.struct.Vec2i;
+import com.cavetale.core.struct.Vec3i;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
-import com.cavetale.core.struct.Vec2i;
 
 /**
  * A grid to store tiles on.
@@ -11,12 +12,12 @@ import com.cavetale.core.struct.Vec2i;
 public final class RogueBoard {
     @Getter protected final Vec2i size;
     protected final RogueTile[] tiles;
-    protected final int[] indexes;
+    protected final char[] chars;
 
     public RogueBoard(final int width, final int height) {
         this.size = new Vec2i(width, height);
         this.tiles = new RogueTile[width * height];
-        this.indexes = new int[width * height];
+        this.chars = new char[width * height];
         for (int i = 0; i < tiles.length; i += 1) {
             tiles[i] = RogueTile.UNDEFINED;
         }
@@ -33,15 +34,15 @@ public final class RogueBoard {
         tiles[x + z * size.x] = tile;
     }
 
-    public int getIndex(int x, int z) {
-        return indexes[x + z * size.x];
+    public char getChar(int x, int z) {
+        return chars[x + z * size.x];
     }
 
-    public void setIndex(int x, int z, int value) {
+    public void setChar(int x, int z, char value) {
         if (x < 0 || x > size.x || z < 0 | z > size.z) {
             throw new IllegalArgumentException(x + "," + z + " / " + size);
         }
-        indexes[x + z * size.x] = value;
+        chars[x + z * size.x] = value;
     }
 
     public String toMultiLineString() {
@@ -58,10 +59,13 @@ public final class RogueBoard {
                 RogueTile tile = getTile(x, z);
                 if (tile.isUndefined()) continue;
                 final char chr;
-                if (tile.isWall()) {
+                char customChar = getChar(x, z);
+                if (customChar > 0) {
+                    chr = customChar;
+                } else if (tile.isWall()) {
                     chr = tile.getCharacter();
                 } else if (tile.isFloor()) {
-                    chr = toChar(getIndex(x, z));
+                    chr = '.'; //toChar(getIndex(x, z));
                 } else if (tile.isDoor()) {
                     chr = tile.getCharacter();
                 } else {
@@ -75,7 +79,7 @@ public final class RogueBoard {
         return String.join("\n", lines);
     }
 
-    private static char toChar(int index) {
+    public static char toChar(int index) {
         if (index < 10) {
             return (char) ('0' + index);
         } else if (index < 10 + 26) {
@@ -85,5 +89,30 @@ public final class RogueBoard {
         } else {
             return '.';
         }
+    }
+
+    /**
+     * Return vector with column, line, size.
+     * In other words: x, z, width.
+     */
+    public Vec3i getWidestLine() {
+        Vec3i result = Vec3i.ZERO;
+        int minDist = size.z;
+        for (int z = 0; z < size.z; z += 1) {
+            int width = 0;
+            for (int x = size.x - 1; x >= 0; x -= 1) {
+                if (getTile(x, z).isFloor()) {
+                    width += 1;
+                } else {
+                    int dist = Math.abs((size.z - 1) / 2 - z);
+                    if (width > result.z || (width == result.z && dist < minDist)) {
+                        minDist = dist;
+                        result = new Vec3i(x + 1, z, width);
+                    }
+                    width = 0;
+                }
+            }
+        }
+        return result;
     }
 }

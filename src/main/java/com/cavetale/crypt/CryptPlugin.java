@@ -21,8 +21,12 @@ public final class CryptPlugin extends JavaPlugin {
         instance = this;
         cryptCommand.enable();
         eventListener.enable();
-        cryptWorld = Blank.create(CRYPT_WORLD_NAME, c -> c.environment(World.Environment.NETHER));
+        cryptWorld = Blank.create(CRYPT_WORLD_NAME, c -> c.environment(World.Environment.NORMAL));
         cryptWorld.setGameRule(GameRule.DO_MOB_SPAWNING, false);
+        cryptWorld.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+        cryptWorld.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
+        cryptWorld.setGameRule(GameRule.REDUCED_DEBUG_INFO, true);
+        cryptWorld.setTime(18000L);
         regionCache = new RegionCache(cryptWorld);
         regionCache.enable();
     }

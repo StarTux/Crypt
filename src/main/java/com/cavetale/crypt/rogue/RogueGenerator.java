@@ -5,6 +5,7 @@ import com.cavetale.crypt.cache.RegionCacheTag;
 import com.cavetale.crypt.struct.Area;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
@@ -15,6 +16,7 @@ import lombok.Setter;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.World;
+import static com.cavetale.core.util.CamelCase.toCamelCase;
 import static com.cavetale.crypt.CryptPlugin.plugin;
 import static java.util.Collections.sort;
 import static java.util.Comparator.comparing;
@@ -72,7 +74,7 @@ public final class RogueGenerator {
         }
         removeRooms(rooms.size() / 2);
         for (RogueRoom room : rooms) room.makeBoard();
-        for (RogueRoom room : rooms) room.findDoors(random);
+        findCrawlPath();
         for (RogueRoom room : rooms) room.placeDoors();
         var center = rooms.get(0).areas.get(0).getCenter();
         this.spawn = new Vec3i(center.x, FLOOR + 1, center.z);
@@ -199,7 +201,7 @@ public final class RogueGenerator {
         for (int i = 0; i < rooms.size() && removeRooms.size() < maxRemoveCount; i += 1) {
             RogueRoom room = rooms.get(i);
             removeRooms.add(room);
-            if (!roomsAreConnected(removeRooms)) {
+            if (!areAllRoomsConnected(removeRooms)) {
                 removeRooms.remove(room);
             }
         }
@@ -209,7 +211,7 @@ public final class RogueGenerator {
         }
     }
 
-    private boolean roomsAreConnected(List<RogueRoom> ignoreList) {
+    private boolean areAllRoomsConnected(List<RogueRoom> ignoreList) {
         List<RogueRoom> connected = new ArrayList<>();
         for (RogueRoom room : rooms) {
             if (!ignoreList.contains(room)) {
@@ -227,6 +229,48 @@ public final class RogueGenerator {
             }
         }
         return connected.size() == rooms.size() - ignoreList.size();
+    }
+
+    private void findCrawlPath() {
+        Collections.sort(rooms, comparing(RogueRoom::getArea));
+        List<RogueRoom> done = new ArrayList<>();
+        RogueRoom entrance = rooms.get(0);
+        entrance.purpose = RogueRoomPurpose.ENTRANCE;
+        done.add(entrance);
+        List<RogueRoom> prev = List.of(entrance);
+        List<RogueRoom> next;
+        int iter = 1;
+        int distance = 0;
+        while (!prev.isEmpty()) {
+            distance += 1;
+            next = new ArrayList<>();
+            for (RogueRoom from : prev) {
+                for (RogueRoom to : from.nbors) {
+                    if (done.contains(to)) continue;
+                    done.add(to);
+                    from.openDoor(to, random);
+                    next.add(to);
+                    from.nextRooms.add(to);
+                    to.previousRoom = from;
+                    to.roomIndex = iter++;
+                    to.distanceToEntrance = distance;
+                }
+            }
+            prev = next;
+        }
+        // Room with highest index is exit
+        Collections.sort(rooms, comparing(RogueRoom::getDistanceToEntrance));
+        RogueRoom exit = rooms.get(rooms.size() - 1);
+        exit.purpose = RogueRoomPurpose.EXIT;
+        List<RogueRoomPurpose> purposes = new ArrayList<>(List.of(RogueRoomPurpose.values()));
+        purposes.remove(RogueRoomPurpose.ENTRANCE);
+        purposes.remove(RogueRoomPurpose.EXIT);
+        Iterator<RogueRoomPurpose> purposeIter = purposes.iterator();
+        for (int i = rooms.size() - 2; i >= 0 && purposeIter.hasNext(); i -= 1) {
+            RogueRoom room = rooms.get(i);
+            if (!room.nextRooms.isEmpty()) continue;
+            room.purpose = purposeIter.next();
+        }
     }
 
     /**
@@ -280,9 +324,7 @@ public final class RogueGenerator {
      */
     public RogueBoard makeBoard() {
         RogueBoard result = new RogueBoard(totalArea.getSizeX(), totalArea.getSizeZ());
-        int iter = 0;
         for (RogueRoom room : rooms) {
-            int it = iter++;
             for (int dz = 0; dz < room.board.size.z; dz += 1) {
                 for (int dx = 0; dx < room.board.size.x; dx += 1) {
                     RogueTile tile = room.board.getTile(dx, dz);
@@ -290,7 +332,16 @@ public final class RogueGenerator {
                     int x = dx + room.boundingBox.ax - totalArea.ax;
                     int z = dz + room.boundingBox.az - totalArea.az;
                     result.setTile(x, z, tile);
-                    result.setIndex(x, z, it);
+                    if (room.purpose != null) {
+                        String label = toCamelCase(" ", room.purpose);
+                        Vec3i line = room.board.getWidestLine();
+                        int offset = Math.max(line.x, line.x + (line.z - label.length()) / 2);
+                        for (int i = 0; i < line.z && i < label.length(); i += 1) {
+                            result.setChar(offset + room.boundingBox.ax - totalArea.ax + i,
+                                           line.y + room.boundingBox.az - totalArea.az,
+                                           label.charAt(i));
+                        }
+                    }
                 }
             }
         }

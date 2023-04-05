@@ -5,6 +5,7 @@ import com.cavetale.crypt.struct.Area;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import lombok.Getter;
 import org.bukkit.Axis;
 import org.bukkit.block.BlockFace;
 
@@ -13,6 +14,7 @@ import org.bukkit.block.BlockFace;
  * Care must be taken because most values use world coordinates while
  * the board uses room coordinates.
  */
+@Getter
 final class RogueRoom {
     // World Coordinates:
     protected final List<Area> areas = new ArrayList<>();
@@ -21,6 +23,12 @@ final class RogueRoom {
     // Room Coordinates:
     protected RogueBoard board;
     protected Area boundingBox;
+    // Set by RogueGenerator#findCrawlPath
+    protected RogueRoomPurpose purpose;
+    protected int roomIndex;
+    protected int distanceToEntrance;
+    protected RogueRoom previousRoom;
+    protected final List<RogueRoom> nextRooms = new ArrayList<>();
 
     protected RogueRoom() { }
 
@@ -79,13 +87,7 @@ final class RogueRoom {
         return null;
     }
 
-    protected void findDoors(Random random) {
-        for (RogueRoom nbor : nbors) {
-            if (getDoor(nbor) == null) findDoor(nbor, random);
-        }
-    }
-
-    protected void findDoor(RogueRoom nbor, Random random) {
+    protected void openDoor(RogueRoom nbor, Random random) {
         List<RogueDoor> possibleDoors = new ArrayList<>();
         for (int dz = 0; dz < board.size.z; dz += 1) {
             for (int dx = 0; dx < board.size.x; dx += 1) {
@@ -118,6 +120,14 @@ final class RogueRoom {
                 }
             }
         }
+    }
+
+    public List<RogueRoom> getDependencies() {
+        if (previousRoom == null) return List.of();
+        List<RogueRoom> result = new ArrayList<>();
+        result.add(previousRoom);
+        result.addAll(previousRoom.getDependencies());
+        return result;
     }
 
     private static final BlockFace[] ADJACENT_FACES = {

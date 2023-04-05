@@ -43,7 +43,7 @@ public final class RogueGeneratorTest {
 
     @Test
     public void test2() {
-        RogueGenerator gen = new RogueGenerator(null, new Random(), new UUID(0L, 0L), "noname", null, null);
+        RogueGenerator gen = new RogueGenerator(null, new Random(), new UUID(0L, 0L), "", null, null);
         gen.setTotalArea(new Area(0, 0, 80, 40));
         gen.main();
         System.out.println(gen.makeBoard().toMultiLineString());
