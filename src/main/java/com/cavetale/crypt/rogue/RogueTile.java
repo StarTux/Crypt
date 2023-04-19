@@ -20,7 +20,11 @@ public enum RogueTile {
     CORNER_INNER_SE(Type.CORNER_INNER, BlockFace.SOUTH_EAST, '\u2554'),
     CORNER_INNER_SW(Type.CORNER_INNER, BlockFace.SOUTH_WEST, '\u2557'),
     CORNER_INNER_NW(Type.CORNER_INNER, BlockFace.NORTH_WEST, '\u255D'),
-    DOOR(Type.DOOR, '\u2588'),
+    DOOR_WEST(Type.DOOR, BlockFace.WEST, '\u2B9C'), // '\u2588'
+    DOOR_NORTH(Type.DOOR, BlockFace.NORTH, '\u2B9D'),
+    DOOR_EAST(Type.DOOR, BlockFace.EAST, '\u2B9E'),
+    DOOR_SOUTH(Type.DOOR, BlockFace.SOUTH, '\u2B9F'),
+    PIT(Type.PIT, ' '),
     ;
 
     public final Type type;
@@ -38,6 +42,7 @@ public enum RogueTile {
         CORNER,
         CORNER_INNER,
         DOOR,
+        PIT,
     }
 
     public boolean isUndefined() {
@@ -54,8 +59,17 @@ public enum RogueTile {
             || type == Type.CORNER_INNER;
     }
 
+    public boolean isCorner() {
+        return type == Type.CORNER
+            || type == Type.CORNER_INNER;
+    }
+
     public boolean isDoor() {
         return type == Type.DOOR;
+    }
+
+    public boolean isPit() {
+        return type == Type.PIT;
     }
 
     public static RogueTile wall(BlockFace face) {
@@ -84,6 +98,16 @@ public enum RogueTile {
         case SOUTH_EAST -> RogueTile.CORNER_INNER_SE;
         case SOUTH_WEST -> RogueTile.CORNER_INNER_SW;
         case NORTH_WEST -> RogueTile.CORNER_INNER_NW;
+        default -> throw new IllegalArgumentException(face.name());
+        };
+    }
+
+    public static RogueTile door(BlockFace face) {
+        return switch (face) {
+        case NORTH -> RogueTile.DOOR_NORTH;
+        case EAST -> RogueTile.DOOR_EAST;
+        case SOUTH -> RogueTile.DOOR_SOUTH;
+        case WEST -> RogueTile.DOOR_WEST;
         default -> throw new IllegalArgumentException(face.name());
         };
     }

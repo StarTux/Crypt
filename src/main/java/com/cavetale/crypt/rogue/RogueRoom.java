@@ -1,6 +1,7 @@
 package com.cavetale.crypt.rogue;
 
 import com.cavetale.core.struct.Vec2i;
+import com.cavetale.core.struct.Vec3i;
 import com.cavetale.crypt.struct.Area;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,9 +21,9 @@ final class RogueRoom {
     protected final List<Area> areas = new ArrayList<>();
     protected final List<RogueRoom> nbors = new ArrayList<>();
     protected final List<RogueDoor> doors = new ArrayList<>();
+    protected Area boundingBox;
     // Room Coordinates:
     protected RogueBoard board;
-    protected Area boundingBox;
     // Set by RogueGenerator#findCrawlPath
     protected RogueRoomPurpose purpose;
     protected int roomIndex;
@@ -87,6 +88,9 @@ final class RogueRoom {
         return null;
     }
 
+    /**
+     * Called as a step by RogueGenerator.
+     */
     protected void openDoor(RogueRoom nbor, Random random) {
         List<RogueDoor> possibleDoors = new ArrayList<>();
         for (int dz = 0; dz < board.size.z; dz += 1) {
@@ -102,7 +106,9 @@ final class RogueRoom {
                 if (tile2.type != RogueTile.Type.WALL) continue;
                 if (tile2.blockFace != tile1.blockFace.getOppositeFace()) continue;
                 RogueDoor door = new RogueDoor(tile1.blockFace.getModX() != 0 ? Axis.X : Axis.Z,
-                                               this, nbor, new Vec2i(x1, z1), new Vec2i(x2, z2));
+                                               this, nbor,
+                                               new Vec2i(x1, z1), new Vec2i(x2, z2),
+                                               RogueTile.door(tile1.blockFace), RogueTile.door(tile2.blockFace));
                 possibleDoors.add(door);
             }
         }
@@ -112,12 +118,19 @@ final class RogueRoom {
         nbor.doors.add(door);
     }
 
-    protected void placeDoors() {
+    /**
+     * Place doors on the board.
+     * Called as a step by RogueGenerator.
+     */
+    protected void placeDoors(int floor) {
         for (RogueDoor door : doors) {
-            for (Vec2i tile : door.tiles) {
-                if (contains(tile)) {
-                    board.setTile(tile.x - boundingBox.ax, tile.z - boundingBox.az, RogueTile.DOOR);
-                }
+            for (int i = 0; i < door.vectors.size(); i += 1) {
+                Vec2i vector = door.vectors.get(i);
+                if (!contains(vector)) continue;
+                RogueTile tile = door.tiles.get(i);
+                board.setTile(vector.x - boundingBox.ax, vector.z - boundingBox.az, tile);
+                door.blocks.add(new Vec3i(vector.x, floor + 1, vector.z).add(boundingBox.ax, 0, boundingBox.az));
+                door.blocks.add(new Vec3i(vector.x, floor + 2, vector.z).add(boundingBox.ax, 0, boundingBox.az));
             }
         }
     }
@@ -188,6 +201,29 @@ final class RogueRoom {
                     throw new IllegalStateException(emptyCartFaces + " " + emptyDiagFaces);
                 }
                 board.setTile(wall.x - boundingBox.ax, wall.z - boundingBox.az, tile);
+            }
+        }
+    }
+
+    protected void decorate() {
+        makeCenterPit();
+    }
+
+    private void makeCenterPit() {
+        for (int z = 1; z < board.size.z - 1; z += 1) {
+            for (int x = 1; x < board.size.x - 1; x += 1) {
+                if (!board.getTile(x, z).isFloor()) continue;
+                boolean isNearWall = false;
+                final int frame = 2;
+                for (int dz = -frame; dz <= frame && !isNearWall; dz += 1) {
+                    for (int dx = -frame; dx <= frame && !isNearWall; dx += 1) {
+                        if (board.getTile(x + dx, z + dz).isWall()) {
+                            isNearWall = true;
+                        }
+                    }
+                }
+                if (isNearWall) continue;
+                board.setTile(x, z, RogueTile.PIT);
             }
         }
     }

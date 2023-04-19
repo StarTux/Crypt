@@ -24,11 +24,14 @@ public final class RogueBoard {
     }
 
     public RogueTile getTile(int x, int z) {
+        if (x < 0 || x >= size.x || z < 0 | z >= size.z) {
+            return RogueTile.UNDEFINED;
+        }
         return tiles[x + z * size.x];
     }
 
     public void setTile(int x, int z, RogueTile tile) {
-        if (x < 0 || x > size.x || z < 0 | z > size.z) {
+        if (x < 0 || x >= size.x || z < 0 | z >= size.z) {
             throw new IllegalArgumentException(x + "," + z + " / " + size);
         }
         tiles[x + z * size.x] = tile;
@@ -62,14 +65,8 @@ public final class RogueBoard {
                 char customChar = getChar(x, z);
                 if (customChar > 0) {
                     chr = customChar;
-                } else if (tile.isWall()) {
-                    chr = tile.getCharacter();
-                } else if (tile.isFloor()) {
-                    chr = '.'; //toChar(getIndex(x, z));
-                } else if (tile.isDoor()) {
-                    chr = tile.getCharacter();
                 } else {
-                    chr = '?';
+                    chr = tile.character;
                 }
                 String line = lines.get(z);
                 line = line.substring(0, x) + chr + line.substring(x + 1, line.length());

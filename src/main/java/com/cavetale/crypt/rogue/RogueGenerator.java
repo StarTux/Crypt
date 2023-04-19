@@ -1,5 +1,6 @@
 package com.cavetale.crypt.rogue;
 
+import com.cavetale.core.struct.Vec2i;
 import com.cavetale.core.struct.Vec3i;
 import com.cavetale.crypt.cache.RegionCacheTag;
 import com.cavetale.crypt.struct.Area;
@@ -8,6 +9,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import lombok.Getter;
@@ -75,7 +77,8 @@ public final class RogueGenerator {
         removeRooms(rooms.size() / 2);
         for (RogueRoom room : rooms) room.makeBoard();
         findCrawlPath();
-        for (RogueRoom room : rooms) room.placeDoors();
+        for (RogueRoom room : rooms) room.placeDoors(FLOOR);
+        for (RogueRoom room : rooms) room.decorate();
         var center = rooms.get(0).areas.get(0).getCenter();
         this.spawn = new Vec3i(center.x, FLOOR + 1, center.z);
     }
@@ -273,43 +276,79 @@ public final class RogueGenerator {
         }
     }
 
+    private static final List<Vec2i> NBOR_TILES_4 = List.of(new Vec2i(0, 1), new Vec2i(0, -1),
+                                                            new Vec2i(1, 0), new Vec2i(-1, 0));
+
     /**
      * Draw all rooms in the world.
      */
     private int drawRooms() {
         int blocks = 0;
+        RogueContext context = new RogueContext(random, FLOOR);
         for (RogueRoom room : rooms) {
-            int ceiling = FLOOR + 5 + random.nextInt(3) - random.nextInt(3);
+            context.room = room;
+            final int ceiling = FLOOR + Math.max(3, 6 + random.nextInt(3) - random.nextInt(3));
+            context.ceilingLevel = ceiling;
             for (int dz = 0; dz < room.board.size.z; dz += 1) {
                 for (int dx = 0; dx < room.board.size.x; dx += 1) {
-                    RogueTile tile = room.board.getTile(dx, dz);
+                    final RogueTile tile = room.board.getTile(dx, dz);
                     if (tile.isUndefined()) continue;
-                    RogueContext context = new RogueContext(random, room, tile, FLOOR, ceiling);
+                    context.tile = tile;
                     int x = room.boundingBox.ax + dx;
                     int z = room.boundingBox.az + dz;
+                    boolean isPitAdjacent = false;
+                    for (Vec2i vector : NBOR_TILES_4) {
+                        if (room.board.getTile(dx + vector.x, dz + vector.z).isPit()) {
+                            isPitAdjacent = true;
+                            break;
+                        }
+                    }
+                    if (isPitAdjacent) {
+                        for (int y = world.getMinHeight(); y < FLOOR; y += 1) {
+                            world.getBlockAt(x, y, z).setBlockData(style.wall(context.xyz(x, y, z)));
+                        }
+                    }
                     if (tile.isWall()) {
+                        boolean isDoorFrame = false;
+                        for (Vec2i vector : NBOR_TILES_4) {
+                            if (room.board.getTile(dx + vector.x, dz + vector.z).isDoor()) {
+                                isDoorFrame = true;
+                                break;
+                            }
+                        }
                         for (int y = FLOOR; y <= ceiling; y += 1) {
-                            world.getBlockAt(x, y, z).setBlockData(style.wall(context, x, y, z));
+                            Set<RogueContext.Hint> hints = isDoorFrame && y <= FLOOR + 3
+                                ? Set.of(RogueContext.Hint.DOOR_FRAME)
+                                : Set.of();
+                            world.getBlockAt(x, y, z).setBlockData(style.wall(context.xyz(x, y, z, hints)));
                             this.totalBlocks += 1;
                         }
                     } else if (tile.isDoor()) {
-                        world.getBlockAt(x, FLOOR + 1, z).setType(Material.CAVE_AIR);
-                        world.getBlockAt(x, FLOOR + 2, z).setType(Material.CAVE_AIR);
-                        this.totalBlocks += 2;
-                        for (int y = FLOOR + 3; y < ceiling; y += 1) {
-                            world.getBlockAt(x, y, z).setBlockData(style.wall(context, x, y, z));
+                        for (int y = FLOOR; y <= FLOOR + 2; y += 1) {
+                            world.getBlockAt(x, y, z).setBlockData(Material.CAVE_AIR.createBlockData());
                             this.totalBlocks += 1;
                         }
-                        world.getBlockAt(x, FLOOR, z).setBlockData(style.floor(context, x, FLOOR, z));
-                        world.getBlockAt(x, ceiling, z).setBlockData(style.ceiling(context, x, ceiling, z));
+                        world.getBlockAt(x, FLOOR + 3, z).setBlockData(style.wall(context.xyz(x, FLOOR + 3, z, Set.of(RogueContext.Hint.DOOR_FRAME))));
+                        this.totalBlocks += 1;
+                        for (int y = FLOOR + 4; y < ceiling; y += 1) {
+                            world.getBlockAt(x, y, z).setBlockData(style.wall(context.xyz(x, y, z)));
+                            this.totalBlocks += 1;
+                        }
+                        world.getBlockAt(x, FLOOR, z).setBlockData(style.floor(context.xyz(x, FLOOR, z)));
+                        world.getBlockAt(x, ceiling, z).setBlockData(style.ceiling(context.xyz(x, ceiling, z)));
                         this.totalBlocks += 2;
-                    } else {
+                    } else if (tile.isPit()) {
+                        for (int y = world.getMinHeight(); y < ceiling; y += 1) {
+                            world.getBlockAt(x, y, z).setBlockData(Material.CAVE_AIR.createBlockData());
+                        }
+                        world.getBlockAt(x, ceiling, z).setBlockData(style.ceiling(context.xyz(x, ceiling, z)));
+                    } else if (tile.isFloor()) {
                         for (int y = FLOOR + 1; y < ceiling; y += 1) {
                             world.getBlockAt(x, y, z).setType(Material.CAVE_AIR);
                             this.totalBlocks += 1;
                         }
-                        world.getBlockAt(x, FLOOR, z).setBlockData(style.floor(context, x, FLOOR, z));
-                        world.getBlockAt(x, ceiling, z).setBlockData(style.ceiling(context, x, ceiling, z));
+                        world.getBlockAt(x, FLOOR, z).setBlockData(style.floor(context.xyz(x, FLOOR, z)));
+                        world.getBlockAt(x, ceiling, z).setBlockData(style.ceiling(context.xyz(x, ceiling, z)));
                         this.totalBlocks += 2;
                     }
                 }
