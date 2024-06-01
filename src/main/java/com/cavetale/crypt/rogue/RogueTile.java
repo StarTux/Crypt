@@ -25,6 +25,8 @@ public enum RogueTile {
     DOOR_EAST(Type.DOOR, BlockFace.EAST, '\u2B9E'),
     DOOR_SOUTH(Type.DOOR, BlockFace.SOUTH, '\u2B9F'),
     PIT(Type.PIT, ' '),
+    WATER(Type.LIQUID, '_'),
+    LAVA(Type.LIQUID, '&'),
     ;
 
     public final Type type;
@@ -43,6 +45,7 @@ public enum RogueTile {
         CORNER_INNER,
         DOOR,
         PIT,
+        LIQUID,
     }
 
     public boolean isUndefined() {
@@ -109,6 +112,15 @@ public enum RogueTile {
         case SOUTH -> RogueTile.DOOR_SOUTH;
         case WEST -> RogueTile.DOOR_WEST;
         default -> throw new IllegalArgumentException(face.name());
+        };
+    }
+
+    public int getDepth() {
+        return switch (this) {
+        case PIT -> -1;
+        case WATER -> 5;
+        case LAVA -> 5;
+        default -> 0;
         };
     }
 }

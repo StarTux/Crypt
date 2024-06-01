@@ -26,6 +26,7 @@ final class RogueRoom {
     protected RogueBoard board;
     // Set by RogueGenerator#findCrawlPath
     protected RogueRoomPurpose purpose;
+    protected RogueRoomFeature feature;
     protected int roomIndex;
     protected int distanceToEntrance;
     protected RogueRoom previousRoom;
@@ -201,29 +202,6 @@ final class RogueRoom {
                     throw new IllegalStateException(emptyCartFaces + " " + emptyDiagFaces);
                 }
                 board.setTile(wall.x - boundingBox.ax, wall.z - boundingBox.az, tile);
-            }
-        }
-    }
-
-    protected void decorate() {
-        makeCenterPit();
-    }
-
-    private void makeCenterPit() {
-        for (int z = 1; z < board.size.z - 1; z += 1) {
-            for (int x = 1; x < board.size.x - 1; x += 1) {
-                if (!board.getTile(x, z).isFloor()) continue;
-                boolean isNearWall = false;
-                final int frame = 2;
-                for (int dz = -frame; dz <= frame && !isNearWall; dz += 1) {
-                    for (int dx = -frame; dx <= frame && !isNearWall; dx += 1) {
-                        if (board.getTile(x + dx, z + dz).isWall()) {
-                            isNearWall = true;
-                        }
-                    }
-                }
-                if (isNearWall) continue;
-                board.setTile(x, z, RogueTile.PIT);
             }
         }
     }

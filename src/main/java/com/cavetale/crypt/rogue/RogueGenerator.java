@@ -40,6 +40,7 @@ public final class RogueGenerator {
     private int totalBlocks;
     private final List<Area> areas = new ArrayList<>();
     private final List<RogueRoom> rooms = new ArrayList<>();
+    private final List<RogueRoomFeature> features = new ArrayList<>();
 
     static final int FLOOR = 65;
 
@@ -78,7 +79,7 @@ public final class RogueGenerator {
         for (RogueRoom room : rooms) room.makeBoard();
         findCrawlPath();
         for (RogueRoom room : rooms) room.placeDoors(FLOOR);
-        for (RogueRoom room : rooms) room.decorate();
+        for (RogueRoom room : rooms) makeRoomFeature(room);
         var center = rooms.get(0).areas.get(0).getCenter();
         this.spawn = new Vec3i(center.x, FLOOR + 1, center.z);
     }
@@ -100,7 +101,7 @@ public final class RogueGenerator {
         if (callback != null) callback.accept(this);
     }
 
-    private static final int MIN_ROOM_SIZE = 5;
+    private static final int MIN_ROOM_SIZE = 6;
     private static final int MIN_ROOM_SIZE_2 = MIN_ROOM_SIZE * 2;
 
     /**
@@ -276,6 +277,32 @@ public final class RogueGenerator {
         }
     }
 
+    private void makeRoomFeature(RogueRoom room) {
+        if (features.isEmpty()) {
+            for (var it : RogueRoomFeature.values()) {
+                features.add(it);
+            }
+            Collections.shuffle(features, random);
+        }
+        RogueRoomFeature theFeature = null;
+        for (RogueRoomFeature feature : features) {
+            if (feature.place(this, room)) {
+                theFeature = feature;
+                features.remove(theFeature);
+                room.feature = feature;
+                break;
+            }
+        }
+        if (theFeature != null) return;
+        for (RogueRoomFeature feature : RogueRoomFeature.values()) {
+            if (features.contains(feature)) continue;
+            if (feature.place(this, room)) {
+                room.feature = feature;
+                break;
+            }
+        }
+    }
+
     private static final List<Vec2i> NBOR_TILES_4 = List.of(new Vec2i(0, 1), new Vec2i(0, -1),
                                                             new Vec2i(1, 0), new Vec2i(-1, 0));
 
@@ -296,18 +323,20 @@ public final class RogueGenerator {
                     context.tile = tile;
                     int x = room.boundingBox.ax + dx;
                     int z = room.boundingBox.az + dz;
-                    boolean isPitAdjacent = false;
+                    // Place blocks below the floor level
+                    int minY = FLOOR;
                     for (Vec2i vector : NBOR_TILES_4) {
-                        if (room.board.getTile(dx + vector.x, dz + vector.z).isPit()) {
-                            isPitAdjacent = true;
-                            break;
+                        int depth = room.board.getTile(dx + vector.x, dz + vector.z).getDepth();
+                        if (depth < 0) {
+                            minY = world.getMinHeight();
+                        } else if (depth > 0) {
+                            minY = Math.min(minY, FLOOR - depth);
                         }
                     }
-                    if (isPitAdjacent) {
-                        for (int y = world.getMinHeight(); y < FLOOR; y += 1) {
-                            world.getBlockAt(x, y, z).setBlockData(style.wall(context.xyz(x, y, z)));
-                        }
+                    for (int y = minY; y < FLOOR; y += 1) {
+                        world.getBlockAt(x, y, z).setBlockData(style.wall(context.xyz(x, y, z)));
                     }
+                    // Place the tile
                     if (tile.isWall()) {
                         boolean isDoorFrame = false;
                         for (Vec2i vector : NBOR_TILES_4) {
